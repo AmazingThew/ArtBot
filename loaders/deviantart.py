@@ -16,11 +16,11 @@ class DeviantArtApiError(Exception):
 
 
 class DeviantArt(object):
-    def __init__(self, authorizationRedirectUri, token):
+    def __init__(self, shelf, authorizationRedirectUri):
         self.clientId     = '3823'
         self.clientSecret = 'ebdbe992445cd52b086030439f710fb3'
         self.authorizationRedirectUri = authorizationRedirectUri
-        self.token = token
+        self.token = shelf.get('deviantartToken')
 
 
     def getAuthorizationUrl(self):
@@ -34,12 +34,14 @@ class DeviantArt(object):
         return "https://www.deviantart.com/oauth2/authorize?" + urlencode(params)
 
 
-    def handleAuthorizationCallback(self, request):
+    def handleAuthorizationCallback(self, shelf, request):
         error = request.args.get('error', '')
         if error:
             return "Error: " + error
         code = request.args.get('code')
-        self.getToken(code)
+        token = self.getToken(code)
+        self.token = token
+        shelf['deviantartToken'] = token
 
 
     def getToken(self, code):
@@ -55,7 +57,7 @@ class DeviantArt(object):
         print('DEVIANTART API TOKEN:')
         print(token)
 
-        self.token = token
+        return token
 
 
     def getWorks(self):

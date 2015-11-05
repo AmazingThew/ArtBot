@@ -1,24 +1,25 @@
 import json
-from pprint import pprint
 import shelve
+
 from flask import Flask, redirect, send_file, jsonify, request, render_template
+
+from loaders.deviantart import DeviantArt, DeviantArtApiError
 from loaders.pixiv import Pixiv
-from loaders.deviantart import DeviantArt, DeviantArtApiError, lold
 
 expiredToken = 'b5d4098c2683a7a5e89adf728b424feab3678b84a81c586b0b'
-goodToken = '56a2f4d40760d158b0bb8e0cd9ed485858ae94f5c436ad5a30'
 
 DA_AUTH_REDIRECT = '/deviantartAuthorizationRedirect'
 
-USE_PIXIV      = False
-USE_DEVIANTART = True
+USE_PIXIV      = True
+USE_DEVIANTART = False
+
 
 app = Flask(__name__, static_folder='static')
 
-if USE_PIXIV: pixiv = Pixiv()
-if USE_DEVIANTART: deviantart = DeviantArt('http://localhost:58008'+DA_AUTH_REDIRECT, expiredToken)
+with shelve.open('db', writeback=True) as shelf:
+    if USE_PIXIV: pixiv = Pixiv(shelf, '', '')
+    if USE_DEVIANTART: deviantart = DeviantArt(shelf, 'http://localhost:58008'+DA_AUTH_REDIRECT)
 
-db = shelve.open('db', writeback=True)
 
 @app.route('/')
 def index():
@@ -47,14 +48,16 @@ def authorizeDeviantart():
 
 @app.route(DA_AUTH_REDIRECT)
 def deviantartAuthorizationRedirect():
-    deviantart.handleAuthorizationCallback(request)
-    return redirect('/')
+    with shelve.open('db', writeback=True) as shelf:
+        deviantart.handleAuthorizationCallback(shelf, request)
+        return redirect('/')
 
 
 @app.errorhandler(DeviantArtApiError)
 def handle_invalid_usage(error):
     print('ERROR')
     print(error.message)
+    print(deviantart.token)
     response = jsonify(error.message)
     response.status_code = error.status_code
     return response

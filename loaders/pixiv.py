@@ -1,5 +1,8 @@
 import json
+import os
 import uuid
+
+import requests
 from pixivpy3 import PixivAPI, PixivError
 
 
@@ -20,10 +23,13 @@ from pixivpy3 import PixivAPI, PixivError
 # Image dimensions
 # Image type (Pixiv only; can be image, manga, or animation)
 
+DOWNLOAD_DIRECTORY = '../downloaded'
+
 class Pixiv(object):
-    def __init__(self, username, password):
+    def __init__(self, shelf, username, password):
         self.username = username
         self.password = password
+        os.makedirs(DOWNLOAD_DIRECTORY, exist_ok=True)
         self.api = PixivAPI()
         self.authorize()
 
@@ -119,15 +125,37 @@ class Pixiv(object):
     def _generateImageUrl(self, url):
         # Construct the URL for the full-res image. Super brittle; entirely dependent on Pixiv never changing anything
         leftSide  = url[:url.find('pixiv.net')+10]
-        rightSide = url[url.find('/img/'):].replace('_master1200', '').replace('.jpg', '.png')
+        rightSide = url[url.find('/img/'):].replace('_master1200', '')
         return leftSide + 'img-original' + rightSide
+
+
+def _downloadImage(url):
+    def attemptDownload(url, suffix):
+        url = '.'.join((url.rpartition('.')[0], suffix))
+        return requests.get(url, headers={'referer': url[:url.find('/img')]}, stream=True)
+
+    r = attemptDownload(url, 'png')
+    if r.status_code == 404:
+        r = attemptDownload(url, 'jpg')
+        if r.status_code == 404:
+            r = attemptDownload(url, 'gif')
+
+    if r.status_code == 200:
+        with open(os.path.join(DOWNLOAD_DIRECTORY, url.split('/')[-1]), 'wb') as f:
+            for chunk in r:
+                f.write(chunk)
+            print('DONE')
+    else:
+        print(r.status_code)
 
 
 
 def main():
-    p = Pixiv()
-    works = p.getWorks()
-    print(json.dumps(works))
+    os.makedirs(DOWNLOAD_DIRECTORY, exist_ok=True)
+    _downloadImage('http://i1.pixiv.net/img-original/img/2015/11/04/23/41/16/53388104_p0.png')
+    # p = Pixiv()
+    # works = p.getWorks()
+    # print(json.dumps(works))
 
 
 
