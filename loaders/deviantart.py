@@ -89,7 +89,7 @@ class DeviantArt(object):
             self.token = token
             self.refreshToken = refreshToken
             self.shelf['deviantartToken'] = token
-            self.shelf['deviantartRefreshToken'] = token
+            self.shelf['deviantartRefreshToken'] = refreshToken
 
 
     def loadWorks(self):

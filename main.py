@@ -13,8 +13,10 @@ DA_AUTH_REDIRECT = '/deviantartAuthorizationRedirect'
 
 PIXIV_DOWNLOAD_DIRECTORY = 'static/downloaded'
 
-USE_PIXIV      = False
+USE_PIXIV      = True
 USE_DEVIANTART = True
+
+MAX_WORKS_ON_PAGE = 100
 
 
 class ArtBot(object):
@@ -71,7 +73,7 @@ class ArtBot(object):
         if USE_PIXIV:      self.pixiv.loadWorks()
         self.shelf.sync()
 
-        works = list(sorted(self.shelf['works'].values(), key=lambda x: x['imageTimestamp'], reverse=True))
+        works = list(sorted(self.shelf['works'].values(), key=lambda x: x['imageTimestamp'], reverse=True))[:MAX_WORKS_ON_PAGE]
         return json.dumps(works)
 
 
