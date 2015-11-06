@@ -2,7 +2,20 @@ body {
     background: url("images/tile.png");
     text-align: center;
     font-family: sans-serif;
+    margin: 0px;
 }
+
+
+.progressBar {
+    /*background-color: #252D33;*/
+    background: linear-gradient(to bottom, rgb(37, 45, 51) , rgb(28, 19, 30));
+    width: 5px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    z-index: 10
+}
+
 
 .art {
     display: inline-block;

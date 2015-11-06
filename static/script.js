@@ -1,43 +1,67 @@
 "use strict";
 
 
-/*var HideButton = React.createClass({
-  getInitialState: function() {
-    return {hidden: false};
-  },
-  handleClick: function(event) {
-    this.setState({hidden: !this.state.liked});
-  },
-  render: function() {
-    var text = this.state.liked ? 'like' : 'haven\'t liked';
-    return (
-      <p onClick={this.handleClick}>
-        You {text} this. Click to toggle.
-      </p>
-    );
-  }
-});
+function getScrollbarWidth() { //BURN WEB STANDARDS TO THE GROUND
+    var inner = document.createElement('p');
+    inner.style.width = "100%";
+    inner.style.height = "200px";
 
-ReactDOM.render(
-  <LikeButton />,
-  document.getElementById('example')
-);*/
+    var outer = document.createElement('div');
+    outer.style.position = "absolute";
+    outer.style.top = "0px";
+    outer.style.left = "0px";
+    outer.style.visibility = "hidden";
+    outer.style.width = "200px";
+    outer.style.height = "150px";
+    outer.style.overflow = "hidden";
+    outer.appendChild(inner);
 
+    document.body.appendChild(outer);
+    var w1 = inner.offsetWidth;
+    outer.style.overflow = 'scroll';
+    var w2 = inner.offsetWidth;
+    if (w1 == w2) w2 = outer.clientWidth;
 
+    document.body.removeChild(outer);
+
+    return (w1 - w2);
+}
+
+var scrollbarWidth = getScrollbarWidth();
 
 
 var ArtColumn = React.createClass({
     getInitialState: function() {
-        return {artArray: []};
+        return {
+            artArray: [],
+            progress: 0,
+            intervalId: 0
+        };
+    },
+
+    updateProgress: function() {
+        if (this.state.progress < 100) {
+            this.setState({progress: this.state.progress + 1});
+        } else {
+            console.log('Clearing interval: ' + this.state.intervalId);
+            window.clearInterval(this.state.intervalId);
+            this.loadArt();
+        }
     },
 
     loadArt: function() {
+        console.log('STARTING LOAD')
         $.ajax({
             url: this.props.url,
             dataType: 'json',
             cache: false,
             success: function(data) {
-                this.setState({artArray: data});
+                this.setState({
+                    artArray: data,
+                    progress: 0,
+                    intervalId: window.setInterval(this.updateProgress, 1200)
+                });
+                console.log('FINISHED LOAD')
             }.bind(this),
             error: function(xhr, status, err) {
                 console.error(this.props.url, status, xhr.responseText);
@@ -55,6 +79,7 @@ var ArtColumn = React.createClass({
     render: function() {
         return (
             <div className="artColumn">
+                <div className='progressBar' style={{height: this.state.progress + '%'}}></div>
                 <ArtList artArray={this.state.artArray} />
             </div>
         );
@@ -89,7 +114,6 @@ var infoBarPadding = 1;
 var artBorderWidth = 2;
 
 function calculateDimensions(baseImageWidth, baseImageHeight, name) {
-    var scrollbarWidth = (window.innerWidth-$(window).width());
     var ww = window.innerWidth - scrollbarWidth*2;
     var wh = window.innerHeight;
     var vMin = (ww < wh) ? ww : wh;
@@ -129,7 +153,6 @@ var Art = React.createClass( {
     },
 
     render: function() {
-        console.log(this.state.hidden);
         var targetWidth  = this.state.targetWidth;
         var targetHeight = this.state.targetHeight;
 

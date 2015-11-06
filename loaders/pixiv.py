@@ -1,7 +1,9 @@
+import datetime
 import json
 import os
 import uuid
 
+import pytz
 import requests
 from pixivpy3 import PixivAPI, PixivError
 
@@ -40,7 +42,7 @@ class Pixiv(object):
             self.api.login(self.username, self.password)
 
 
-    def getWorks(self):
+    def loadWorks(self):
         feeds = self.api.me_feeds()
         workIds = [r['ref_work']['id'] for r in feeds['response'] if r['type'] == 'add_illust']
         workDicts = [self._getWorkDict(workId) for workId in workIds]
@@ -60,7 +62,7 @@ class Pixiv(object):
         imageList = []
         for imageDict in workDict['response']:
             imageData = {
-                'identifier'      : str(uuid.uuid4()),
+                'identifier'      : '',
                 'authorName'      : '',
                 'authorHandle'    : '',
                 'authorAvatarUrl' : '',
@@ -79,29 +81,35 @@ class Pixiv(object):
             }
 
             if workDict['status'] == 'success':
-                user = imageDict.get('user') or {}
-                imageData['authorName']      = str(user.get('name'))
-                imageData['authorHandle']    = str(user.get('account'))
-                imageData['authorAvatarUrl'] = str((user.get('profile_image_urls') or {}).get('px_50x50'))
-                imageData['profileUrl']      = 'http://www.pixiv.net/member.php?id=' + str(user.get('id'))
-                imageData['website']         = 'Pixiv'
-                imageData['imageTitle']      = str(imageDict.get('title'))
-                imageData['imageUrls']       = self._getImageUrls(imageDict)
-                imageData['imagePageUrl']    = 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=' + str(imageDict.get('id'))
-                imageData['imageTimestamp']  = str(imageDict.get('created_time'))
-                imageData['imageType']       = str(imageDict.get('type'))
-                imageData['nsfw']            = str(imageDict.get('age_limit') != 'all-age')
-                imageData['width']           = str(imageDict.get('width')) or '500'
-                imageData['height']          = str(imageDict.get('height')) or '500'
-                imageData['success']         = str(imageDict.get('status') == 'success')
-                imageData['error']           = str(imageDict.get('errors'))
+                identifier = str(imageDict.get('id'))
+                if identifier not in self.shelf['works']: # Skip images we've already loaded
+                    user = imageDict.get('user') or {}
+                    imageData['identifier']      = identifier
+                    imageData['authorName']      = str(user.get('name'))
+                    imageData['authorHandle']    = str(user.get('account'))
+                    imageData['authorAvatarUrl'] = str((user.get('profile_image_urls') or {}).get('px_50x50'))
+                    imageData['profileUrl']      = 'http://www.pixiv.net/member.php?id=' + str(user.get('id'))
+                    imageData['website']         = 'Pixiv'
+                    imageData['imageTitle']      = str(imageDict.get('title'))
+                    imageData['imageUrls']       = self._getImageUrls(imageDict)
+                    imageData['imagePageUrl']    = 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=' + str(imageDict.get('id'))
+                    imageData['imageTimestamp']  = str(max(imageDict.get('created_time'), imageDict.get('reupoloaded_time', '')))
+                    imageData['imageType']       = str(imageDict.get('type'))
+                    imageData['nsfw']            = str(imageDict.get('age_limit') != 'all-age')
+                    imageData['width']           = str(imageDict.get('width')) or '500'
+                    imageData['height']          = str(imageDict.get('height')) or '500'
+                    imageData['success']         = str(imageDict.get('status') == 'success')
+                    imageData['error']           = str(imageDict.get('errors'))
 
+                    self.shelf['works'][identifier] = imageData
             else:
-                imageData['error'] = str(workDict.get('errors'))
-
-            imageList.append(imageData)
+                raise RuntimeError('Failed Pixiv API call: ' + workDict.get('errors'))
 
         return imageList
+
+    def _parseTime(self, imageDict):
+        s = max(imageDict.get('created_time', ''), imageDict.get('reupoloaded_time', ''))
+        return datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.UTC).isoformat()
 
     def _getImageUrls(self, imageDict):
         workType = imageDict.get('type')
@@ -150,10 +158,13 @@ class Pixiv(object):
         if r.status_code == 200:
             filename = url.split('/')[-1]
             filepath = os.path.join(self.downloadDirectory, filename)
-            with open(filepath, 'wb') as f:
-                for chunk in r:
-                    f.write(chunk)
-                return '/'.join((self.downloadDirectory, filename))
+            if os.path.isfile(filepath):
+                print ('File already downloaded; skipping')
+            else:
+                with open(filepath, 'wb') as f:
+                    for chunk in r:
+                        f.write(chunk)
+            return '/'.join((self.downloadDirectory, filename))
         else:
             return r.status_code + ' ' + url
 
