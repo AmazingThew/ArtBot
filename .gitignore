@@ -1,7 +1,7 @@
 /db.dat
 /db.dir
 /db.bak
-/downloaded
+/static/downloaded
 # Windows image file caches
 Thumbs.db
 ehthumbs.db

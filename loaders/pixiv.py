@@ -23,18 +23,21 @@ from pixivpy3 import PixivAPI, PixivError
 # Image dimensions
 # Image type (Pixiv only; can be image, manga, or animation)
 
-DOWNLOAD_DIRECTORY = '../downloaded'
-
 class Pixiv(object):
-    def __init__(self, shelf, username, password):
-        self.username = username
-        self.password = password
-        os.makedirs(DOWNLOAD_DIRECTORY, exist_ok=True)
+    def __init__(self, shelf, downloadDirectory):
+        self.shelf = shelf
+        self.username = self.shelf.get('pixivUsername')
+        self.password = self.shelf.get('pixivPassword')
+        self.downloadDirectory = downloadDirectory
+        os.makedirs(self.downloadDirectory, exist_ok=True)
         self.api = PixivAPI()
         self.authorize()
 
     def authorize(self):
-        self.api.login(self.username, self.password)
+        self.username = self.shelf.get('pixivUsername')
+        self.password = self.shelf.get('pixivPassword')
+        if self.username and self.password:
+            self.api.login(self.username, self.password)
 
 
     def getWorks(self):
@@ -65,6 +68,7 @@ class Pixiv(object):
                 'website'         : '',
                 'imageTitle'      : '',
                 'imageUrls'       : [],
+                'imagePageUrl'    : '',
                 'imageTimestamp'  : '',
                 'imageType'       : '',
                 'nsfw'            : False,
@@ -83,6 +87,7 @@ class Pixiv(object):
                 imageData['website']         = 'Pixiv'
                 imageData['imageTitle']      = str(imageDict.get('title'))
                 imageData['imageUrls']       = self._getImageUrls(imageDict)
+                imageData['imagePageUrl']    = 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=' + str(imageDict.get('id'))
                 imageData['imageTimestamp']  = str(imageDict.get('created_time'))
                 imageData['imageType']       = str(imageDict.get('type'))
                 imageData['nsfw']            = str(imageDict.get('age_limit') != 'all-age')
@@ -120,6 +125,7 @@ class Pixiv(object):
             urlDict = imageDict.get('image_urls') or {}
             urls = [urlDict.get('small') or urlDict.get('medium') or urlDict.get('large')]
 
+        urls = [self._downloadImage(url) for url in urls]
         return urls
 
     def _generateImageUrl(self, url):
@@ -129,30 +135,34 @@ class Pixiv(object):
         return leftSide + 'img-original' + rightSide
 
 
-def _downloadImage(url):
-    def attemptDownload(url, suffix):
-        url = '.'.join((url.rpartition('.')[0], suffix))
-        return requests.get(url, headers={'referer': url[:url.find('/img')]}, stream=True)
+    def _downloadImage(self, url):
+        print('Downloading ' + url)
+        def attemptDownload(attemptUrl, suffix):
+            attemptUrl = '.'.join((attemptUrl.rpartition('.')[0], suffix))
+            return requests.get(attemptUrl, headers={'referer': attemptUrl[:attemptUrl.find('/img')]}, stream=True)
 
-    r = attemptDownload(url, 'png')
-    if r.status_code == 404:
-        r = attemptDownload(url, 'jpg')
+        r = attemptDownload(url, 'png')
         if r.status_code == 404:
-            r = attemptDownload(url, 'gif')
+            r = attemptDownload(url, 'jpg')
+            if r.status_code == 404:
+                r = attemptDownload(url, 'gif')
 
-    if r.status_code == 200:
-        with open(os.path.join(DOWNLOAD_DIRECTORY, url.split('/')[-1]), 'wb') as f:
-            for chunk in r:
-                f.write(chunk)
-            print('DONE')
-    else:
-        print(r.status_code)
+        if r.status_code == 200:
+            filename = url.split('/')[-1]
+            filepath = os.path.join(self.downloadDirectory, filename)
+            with open(filepath, 'wb') as f:
+                for chunk in r:
+                    f.write(chunk)
+                return '/'.join((self.downloadDirectory, filename))
+        else:
+            return r.status_code + ' ' + url
 
 
 
 def main():
-    os.makedirs(DOWNLOAD_DIRECTORY, exist_ok=True)
-    _downloadImage('http://i1.pixiv.net/img-original/img/2015/11/04/23/41/16/53388104_p0.png')
+    pass
+    # os.makedirs(DOWNLOAD_DIRECTORY, exist_ok=True)
+    # _downloadImage('http://i1.pixiv.net/img-original/img/2015/11/04/23/41/16/53388104_p0.png')
     # p = Pixiv()
     # works = p.getWorks()
     # print(json.dumps(works))

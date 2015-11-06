@@ -20,7 +20,9 @@ class DeviantArt(object):
         self.clientId     = '3823'
         self.clientSecret = 'ebdbe992445cd52b086030439f710fb3'
         self.authorizationRedirectUri = authorizationRedirectUri
-        self.token = shelf.get('deviantartToken')
+        self.shelf = shelf
+        self.token = self.shelf.get('deviantartToken')
+        self.refreshToken = self.shelf.get('deviantartRefreshToken')
 
 
     def getAuthorizationUrl(self):
@@ -34,14 +36,12 @@ class DeviantArt(object):
         return "https://www.deviantart.com/oauth2/authorize?" + urlencode(params)
 
 
-    def handleAuthorizationCallback(self, shelf, request):
+    def handleAuthorizationCallback(self, request):
         error = request.args.get('error', '')
         if error:
             return "Error: " + error
         code = request.args.get('code')
-        token = self.getToken(code)
-        self.token = token
-        shelf['deviantartToken'] = token
+        self.getToken(code)
 
 
     def getToken(self, code):
@@ -54,14 +54,45 @@ class DeviantArt(object):
                                  data=post_data)
         token_json = response.json()
         token = token_json["access_token"]
+        refreshToken = token_json['refresh_token']
         print('DEVIANTART API TOKEN:')
         print(token)
+        print('DEVIANTART REFRESH TOKEN:')
+        print(refreshToken)
 
-        return token
+        self.token = token
+        self.refreshToken = refreshToken
+        self.shelf['deviantartToken'] = token
+        self.shelf['deviantartRefreshToken'] = token
+
+
+    def refreshAuthorization(self):
+        print('Attempting DA auth refresh with token: ')
+        print(self.refreshToken)
+        client_auth = requests.auth.HTTPBasicAuth(self.clientId, self.clientSecret)
+        post_data = {"grant_type": "refresh_token",
+                     "refresh_token": self.refreshToken}
+        response = requests.post("https://www.deviantart.com/oauth2/token",
+                                 auth=client_auth,
+                                 data=post_data)
+
+        if response.status_code == 200:
+            token_json = response.json()
+            token = token_json["access_token"]
+            refreshToken = token_json['refresh_token']
+            print('REFRESHED DEVIANTART API TOKEN:')
+            print(token)
+            print('REFRESHED DEVIANTART REFRESH TOKEN:')
+            print(refreshToken)
+
+            self.token = token
+            self.refreshToken = refreshToken
+            self.shelf['deviantartToken'] = token
+            self.shelf['deviantartRefreshToken'] = token
 
 
     def getWorks(self):
-        print('POW')
+        self.refreshAuthorization()
         response = requests.get('https://www.deviantart.com/api/v1/oauth2/feed/home?' + urlencode({'access_token' : self.token}))
         if response.status_code != 200:
             print('ERROR')
@@ -85,6 +116,7 @@ class DeviantArt(object):
                 'website'         : '',
                 'imageTitle'      : '',
                 'imageUrls'       : [],
+                'imagePageUrl'    : '',
                 'imageTimestamp'  : '',
                 'imageType'       : '',
                 'nsfw'            : False,
@@ -104,6 +136,7 @@ class DeviantArt(object):
             imageData['website']         = 'DeviantArt'
             imageData['imageTitle']      = str(deviation.get('title'))
             imageData['imageUrls']       = [str(imageInfo.get('src'))]
+            imageData['imagePageUrl']    = str(deviation.get('url'))
             imageData['imageTimestamp']  = str(timestamp)
             imageData['imageType']       = '"deviation"'
             imageData['nsfw']            = str(deviation.get('is_mature'))

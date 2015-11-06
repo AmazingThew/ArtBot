@@ -171,7 +171,7 @@ var Art = React.createClass( {
                         </p>
                     </div>
                     <div className="titleHolder">
-                        <h1><a href={this.props.artData.profileUrl}>{this.props.artData.imageTitle}</a></h1>
+                        <h1><a href={this.props.artData.imagePageUrl}>{this.props.artData.imageTitle}</a></h1>
                     </div>
                     <div className="buttonHolder">
                         <a href="#" className="butt" onClick={this.handleClick}>=</a>
