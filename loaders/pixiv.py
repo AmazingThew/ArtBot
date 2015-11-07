@@ -43,6 +43,7 @@ class Pixiv(object):
 
 
     def loadWorks(self):
+        self.authorize()
         feeds = self.api.me_feeds()
         workIds = [r['ref_work']['id'] for r in feeds['response'] if r['type'] == 'add_illust']
         workDicts = [self._getWorkDict(workId) for workId in workIds]

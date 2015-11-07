@@ -79,7 +79,7 @@ var ArtColumn = React.createClass({
     render: function() {
         return (
             <div className="artColumn">
-                <div className='progressBar' style={{height: this.state.progress + '%'}}></div>
+                <div className='progressBar' style={{height: 100 - this.state.progress + '%'}}></div>
                 <ArtList artArray={this.state.artArray} />
             </div>
         );
