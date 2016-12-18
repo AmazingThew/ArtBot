@@ -56,10 +56,6 @@ class DeviantArt(object):
         token_json = response.json()
         token = token_json["access_token"]
         refreshToken = token_json['refresh_token']
-        print('DEVIANTART API TOKEN:')
-        print(token)
-        print('DEVIANTART REFRESH TOKEN:')
-        print(refreshToken)
 
         self.token = token
         self.refreshToken = refreshToken
@@ -68,8 +64,7 @@ class DeviantArt(object):
 
 
     def refreshAuthorization(self):
-        print('Attempting DA auth refresh with token: ')
-        print(self.refreshToken)
+        print('Attempting DA auth refresh')
         client_auth = requests.auth.HTTPBasicAuth(self.clientId, self.clientSecret)
         post_data = {"grant_type": "refresh_token",
                      "refresh_token": self.refreshToken}
@@ -81,10 +76,6 @@ class DeviantArt(object):
             token_json = response.json()
             token = token_json["access_token"]
             refreshToken = token_json['refresh_token']
-            print('REFRESHED DEVIANTART API TOKEN:')
-            print(token)
-            print('REFRESHED DEVIANTART REFRESH TOKEN:')
-            print(refreshToken)
 
             self.token = token
             self.refreshToken = refreshToken
@@ -150,7 +141,6 @@ class DeviantArt(object):
 
         for d in imageList:
             d['identifier'] = d['identifier'] if isinstance(d['identifier'], str) else d['identifier'][0] #??????????????????????             WHY
-            print('Weird ID: ' + d['identifier'])
 
             # Just clobber existing data here;
             # DA pulls everything down in one API call so there's no performance to be gained by skipping existing IDs:

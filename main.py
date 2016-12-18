@@ -1,7 +1,9 @@
 import json
 import os
 import pickle
+from pprint import pprint
 
+import itertools
 from flask import Flask, redirect, send_file, jsonify, request, render_template
 
 from loaders.deviantart import DeviantArt, DeviantArtApiError
@@ -17,7 +19,7 @@ PIXIV_DOWNLOAD_DIRECTORY = 'static/downloaded'
 USE_PIXIV      = True
 USE_DEVIANTART = True
 
-MAX_WORKS_ON_PAGE = 100
+MAX_WORKS_ON_PAGE = 150
 
 DB_FILENAME = 'db'
 
@@ -80,10 +82,24 @@ class ArtBot(object):
     def getWorks(self):
         if USE_DEVIANTART: self.deviantart.loadWorks()
         if USE_PIXIV:      self.pixiv.loadWorks()
-        self.persistDb()
 
         works = list(sorted(self.dbDict['works'].values(), key=lambda x: x['imageTimestamp'], reverse=True))[:MAX_WORKS_ON_PAGE]
+
+        self.cleanDb(works)
+        self.persistDb()
         return json.dumps(works)
+
+
+    def cleanDb(self, works):
+        discard = list(sorted(self.dbDict['works'].items(), key=lambda x: x[1]['imageTimestamp'], reverse=True))[MAX_WORKS_ON_PAGE:]
+        [self.dbDict['works'].pop(key) for (key, val) in discard]
+
+        keepImages = itertools.chain(*(work['imageUrls'] for work in works))
+        keepImages = set(os.path.split(url)[1] for url in keepImages if not url.startswith('http'))
+        existingImages = set(os.path.split(url)[1] for url in os.listdir(PIXIV_DOWNLOAD_DIRECTORY))
+        imagesToRemove = existingImages - keepImages
+
+        [os.remove(os.path.join(PIXIV_DOWNLOAD_DIRECTORY, name)) for name in imagesToRemove]
 
 
     def persistDb(self):
