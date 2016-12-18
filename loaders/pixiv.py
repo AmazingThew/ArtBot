@@ -24,12 +24,14 @@ from pixivpy3 import PixivAPI, PixivError
 # Image type (Pixiv only; can be image, manga, or animation)
 
 class Pixiv(object):
-    def __init__(self, dbDict, downloadDirectory):
+    def __init__(self, dbDict, downloadDirectory, avatarDirectory):
         self.dbDict = dbDict
         self.username = self.dbDict.get('pixivUsername')
         self.password = self.dbDict.get('pixivPassword')
         self.downloadDirectory = downloadDirectory
+        self.avatarDirectory = avatarDirectory
         os.makedirs(self.downloadDirectory, exist_ok=True)
+        os.makedirs(self.avatarDirectory, exist_ok=True)
         self.api = PixivAPI()
         self.authorize()
 
@@ -41,6 +43,7 @@ class Pixiv(object):
 
 
     def loadWorks(self):
+        print('Retrieving Pixiv works')
         self.authorize()
         feeds = self.api.me_feeds()
         workIds = [r['ref_work']['id'] for r in feeds['response'] if r['type'] == 'add_illust']
@@ -86,7 +89,7 @@ class Pixiv(object):
                     imageData['identifier']      = identifier
                     imageData['authorName']      = str(user.get('name'))
                     imageData['authorHandle']    = str(user.get('account'))
-                    imageData['authorAvatarUrl'] = str((user.get('profile_image_urls') or {}).get('px_50x50'))
+                    imageData['authorAvatarUrl'] = self._getAvatarUrl(str((user.get('profile_image_urls') or {}).get('px_50x50')))
                     imageData['profileUrl']      = 'http://www.pixiv.net/member.php?id=' + str(user.get('id'))
                     imageData['website']         = 'Pixiv'
                     imageData['imageTitle']      = str(imageDict.get('title'))
@@ -110,6 +113,9 @@ class Pixiv(object):
         s = max(imageDict.get('created_time', ''), imageDict.get('reupoloaded_time', ''))
         return datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.UTC).isoformat()
 
+    def _getAvatarUrl(self, remoteUrl):
+        return self._downloadImage(remoteUrl, self.avatarDirectory)
+
     def _getImageUrls(self, imageDict):
         workType = imageDict.get('type')
         if workType == 'illustration':
@@ -132,7 +138,7 @@ class Pixiv(object):
             urlDict = imageDict.get('image_urls') or {}
             urls = [urlDict.get('small') or urlDict.get('medium') or urlDict.get('large')]
 
-        urls = [self._downloadImage(url) for url in urls]
+        urls = [self._downloadImage(url, self.downloadDirectory) for url in urls]
         return urls
 
     def _generateImageUrl(self, url):
@@ -142,7 +148,7 @@ class Pixiv(object):
         return leftSide + 'img-original' + rightSide
 
 
-    def _downloadImage(self, url):
+    def _downloadImage(self, url, directory):
         print('Downloading ' + url)
         def attemptDownload(attemptUrl, suffix):
             attemptUrl = '.'.join((attemptUrl.rpartition('.')[0], suffix))
@@ -156,14 +162,14 @@ class Pixiv(object):
 
         if r.status_code == 200:
             filename = url.split('/')[-1]
-            filepath = os.path.join(self.downloadDirectory, filename)
+            filepath = os.path.join(directory, filename)
             if os.path.isfile(filepath):
                 print ('File already downloaded; skipping')
             else:
                 with open(filepath, 'wb') as f:
                     for chunk in r:
                         f.write(chunk)
-            return '/'.join((self.downloadDirectory, filename))
+            return '/'.join((directory, filename))
         else:
             return r.status_code + ' ' + url
 

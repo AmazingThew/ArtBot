@@ -12,6 +12,10 @@ Manually checking a bunch of separate art websites is a pain because you have to
 ...Also Pixiv's UX is horrific
 
 
+#DID YOU JUST PAINSTAKINGLY REINVENT RSS FEEDS
+Pretty much yes, but I was nearly finished by the time I noticed that
+
+
 #CURRENT STATUS
 Very alpha. It works for DA and Pixiv at the moment but hasn't really been bug tested and a lot of planned features are missing.
 The UI is kinda pretty though

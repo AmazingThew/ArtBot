@@ -84,6 +84,7 @@ class DeviantArt(object):
 
 
     def loadWorks(self):
+        print('Retrieving DeviantArt works')
         self.refreshAuthorization()
         response = requests.get('https://www.deviantart.com/api/v1/oauth2/feed/home?' + urlencode({'access_token' : self.token}))
         if response.status_code != 200:

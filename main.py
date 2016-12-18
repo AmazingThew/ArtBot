@@ -10,11 +10,10 @@ from loaders.deviantart import DeviantArt, DeviantArtApiError
 from loaders.pixiv import Pixiv
 
 
-expiredToken = 'b5d4098c2683a7a5e89adf728b424feab3678b84a81c586b0b'
-
 DA_AUTH_REDIRECT = '/deviantartAuthorizationRedirect'
 
 PIXIV_DOWNLOAD_DIRECTORY = 'static/downloaded'
+PIXIV_AVATAR_DIRECTORY   = 'static/avatars'
 
 USE_PIXIV      = True
 USE_DEVIANTART = True
@@ -22,6 +21,7 @@ USE_DEVIANTART = True
 MAX_WORKS_ON_PAGE = 150
 
 DB_FILENAME = 'db'
+
 
 class ArtBot(object):
 
@@ -31,7 +31,7 @@ class ArtBot(object):
         self.dbDict = None
         self.initDb()
 
-        if USE_PIXIV: self.pixiv = Pixiv(self.dbDict, PIXIV_DOWNLOAD_DIRECTORY)
+        if USE_PIXIV: self.pixiv = Pixiv(self.dbDict, PIXIV_DOWNLOAD_DIRECTORY, PIXIV_AVATAR_DIRECTORY)
         if USE_DEVIANTART: self.deviantart = DeviantArt(self.dbDict, 'http://localhost:58008'+DA_AUTH_REDIRECT)
 
         self.app.add_url_rule('/', 'index', self.index)
@@ -94,6 +94,7 @@ class ArtBot(object):
         discard = list(sorted(self.dbDict['works'].items(), key=lambda x: x[1]['imageTimestamp'], reverse=True))[MAX_WORKS_ON_PAGE:]
         [self.dbDict['works'].pop(key) for (key, val) in discard]
 
+        # Clean images
         keepImages = itertools.chain(*(work['imageUrls'] for work in works))
         keepImages = set(os.path.split(url)[1] for url in keepImages if not url.startswith('http'))
         existingImages = set(os.path.split(url)[1] for url in os.listdir(PIXIV_DOWNLOAD_DIRECTORY))
@@ -101,8 +102,17 @@ class ArtBot(object):
 
         [os.remove(os.path.join(PIXIV_DOWNLOAD_DIRECTORY, name)) for name in imagesToRemove]
 
+        # Clean avatars
+        keepAvatars = (work['authorAvatarUrl'] for work in works)
+        keepAvatars = set(os.path.split(url)[1] for url in keepAvatars if not url.startswith('http'))
+        existingAvatars = set(os.path.split(url)[1] for url in os.listdir(PIXIV_AVATAR_DIRECTORY))
+        avatarsToRemove = existingAvatars - keepAvatars
+
+        [os.remove(os.path.join(PIXIV_AVATAR_DIRECTORY, name)) for name in avatarsToRemove]
+
 
     def persistDb(self):
+        print('Persisting to disk')
         with open(DB_FILENAME, 'wb') as dbFile:
             pickle.dump(self.dbDict, dbFile)
 
@@ -124,6 +134,15 @@ class ArtBot(object):
         response.status_code = error.status_code
         return response
 
+
+def wipeWorks():
+    with open(DB_FILENAME, 'rb') as dbFile:
+        dbDict = pickle.load(dbFile)
+
+    dbDict['works'] = {}
+
+    with open(DB_FILENAME, 'wb') as dbFile:
+        pickle.dump(dbDict, dbFile)
 
 if __name__ == '__main__':
     ArtBot()
