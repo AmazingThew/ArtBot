@@ -1,5 +1,6 @@
 import json
-import shelve
+import os
+import pickle
 
 from flask import Flask, redirect, send_file, jsonify, request, render_template
 
@@ -18,17 +19,18 @@ USE_DEVIANTART = True
 
 MAX_WORKS_ON_PAGE = 100
 
+DB_FILENAME = 'db'
 
 class ArtBot(object):
 
-    def __init__(self, shelf):
+    def __init__(self):
         self.app = Flask(__name__, static_folder='static')
 
-        self.shelf = shelf
-        self.initShelf()
+        self.dbDict = None
+        self.initDb()
 
-        if USE_PIXIV: self.pixiv = Pixiv(self.shelf, PIXIV_DOWNLOAD_DIRECTORY)
-        if USE_DEVIANTART: self.deviantart = DeviantArt(self.shelf, 'http://localhost:58008'+DA_AUTH_REDIRECT)
+        if USE_PIXIV: self.pixiv = Pixiv(self.dbDict, PIXIV_DOWNLOAD_DIRECTORY)
+        if USE_DEVIANTART: self.deviantart = DeviantArt(self.dbDict, 'http://localhost:58008'+DA_AUTH_REDIRECT)
 
         self.app.add_url_rule('/', 'index', self.index)
         self.app.add_url_rule('/getWorks', 'getWorks', self.getWorks)
@@ -42,17 +44,24 @@ class ArtBot(object):
         self.app.run(debug=True, port=58008)
 
 
-    def initShelf(self):
-        if not self.shelf.get('works'): self.shelf['works'] = {}
-        # self.shelf['works'] = {}
-        # shelf['deviantartToken'] = 'fart'
-        # shelf['deviantartRefreshToken'] = 'also fart'
-        # shelf['pixivUsername'] = 'this too is fart'
-        # shelf['pixivPassword'] = 'yet further fart'
+    def initDb(self):
+        if os.path.isfile(DB_FILENAME):
+            with open(DB_FILENAME, 'rb') as dbFile:
+                try:
+                    self.dbDict = pickle.load(dbFile)
+                except Exception as e:
+                    print('Exception loading db file:')
+                    print(e)
+
+        if not isinstance(self.dbDict, dict):
+            print('Unable to parse db file, defaulting to empty db')
+            self.dbDict = {}
+
+        if not self.dbDict.get('works'): self.dbDict['works'] = {}
 
 
     def index(self):
-        if USE_PIXIV and not (self.shelf.get('pixivUsername') and self.shelf.get('pixivPassword')):
+        if USE_PIXIV and not (self.dbDict.get('pixivUsername') and self.dbDict.get('pixivPassword')):
             return redirect('/getLoginDetails')
         return send_file('static/index.html')
 
@@ -62,8 +71,8 @@ class ArtBot(object):
 
 
     def submitLoginDetails(self):
-        self.shelf['pixivUsername'] = request.form['pixivUsername']
-        self.shelf['pixivPassword'] = request.form['pixivPassword']
+        self.dbDict['pixivUsername'] = request.form['pixivUsername']
+        self.dbDict['pixivPassword'] = request.form['pixivPassword']
         if USE_PIXIV: self.pixiv.authorize()
         return redirect('/')
 
@@ -71,14 +80,15 @@ class ArtBot(object):
     def getWorks(self):
         if USE_DEVIANTART: self.deviantart.loadWorks()
         if USE_PIXIV:      self.pixiv.loadWorks()
-        self.shelf.sync()
+        self.persistDb()
 
-        works = list(sorted(self.shelf['works'].values(), key=lambda x: x['imageTimestamp'], reverse=True))[:MAX_WORKS_ON_PAGE]
+        works = list(sorted(self.dbDict['works'].values(), key=lambda x: x['imageTimestamp'], reverse=True))[:MAX_WORKS_ON_PAGE]
         return json.dumps(works)
 
 
-    def persistWorks(self):
-        pass
+    def persistDb(self):
+        with open(DB_FILENAME, 'wb') as dbFile:
+            pickle.dump(self.dbDict, dbFile)
 
 
     def authorizeDeviantart(self):
@@ -98,11 +108,6 @@ class ArtBot(object):
         response.status_code = error.status_code
         return response
 
-def main():
-    with shelve.open('db', writeback=True) as shelf:
-        ArtBot(shelf)
-
 
 if __name__ == '__main__':
-    main()
-    # main()
+    ArtBot()

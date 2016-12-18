@@ -17,13 +17,13 @@ class DeviantArtApiError(Exception):
 
 
 class DeviantArt(object):
-    def __init__(self, shelf, authorizationRedirectUri):
+    def __init__(self, dbDict, authorizationRedirectUri):
         self.clientId     = '3823'
         self.clientSecret = 'ebdbe992445cd52b086030439f710fb3'
         self.authorizationRedirectUri = authorizationRedirectUri
-        self.shelf = shelf
-        self.token = self.shelf.get('deviantartToken')
-        self.refreshToken = self.shelf.get('deviantartRefreshToken')
+        self.dbDict = dbDict
+        self.token = self.dbDict.get('deviantartToken')
+        self.refreshToken = self.dbDict.get('deviantartRefreshToken')
 
 
     def getAuthorizationUrl(self):
@@ -63,8 +63,8 @@ class DeviantArt(object):
 
         self.token = token
         self.refreshToken = refreshToken
-        self.shelf['deviantartToken'] = token
-        self.shelf['deviantartRefreshToken'] = token
+        self.dbDict['deviantartToken'] = token
+        self.dbDict['deviantartRefreshToken'] = token
 
 
     def refreshAuthorization(self):
@@ -88,8 +88,8 @@ class DeviantArt(object):
 
             self.token = token
             self.refreshToken = refreshToken
-            self.shelf['deviantartToken'] = token
-            self.shelf['deviantartRefreshToken'] = refreshToken
+            self.dbDict['deviantartToken'] = token
+            self.dbDict['deviantartRefreshToken'] = refreshToken
 
 
     def loadWorks(self):
@@ -154,7 +154,7 @@ class DeviantArt(object):
 
             # Just clobber existing data here;
             # DA pulls everything down in one API call so there's no performance to be gained by skipping existing IDs:
-            self.shelf['works'][d['identifier']] = d
+            self.dbDict['works'][d['identifier']] = d
 
 
 def main():

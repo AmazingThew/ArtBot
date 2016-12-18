@@ -1,7 +1,5 @@
 import datetime
-import json
 import os
-import uuid
 
 import pytz
 import requests
@@ -26,18 +24,18 @@ from pixivpy3 import PixivAPI, PixivError
 # Image type (Pixiv only; can be image, manga, or animation)
 
 class Pixiv(object):
-    def __init__(self, shelf, downloadDirectory):
-        self.shelf = shelf
-        self.username = self.shelf.get('pixivUsername')
-        self.password = self.shelf.get('pixivPassword')
+    def __init__(self, dbDict, downloadDirectory):
+        self.dbDict = dbDict
+        self.username = self.dbDict.get('pixivUsername')
+        self.password = self.dbDict.get('pixivPassword')
         self.downloadDirectory = downloadDirectory
         os.makedirs(self.downloadDirectory, exist_ok=True)
         self.api = PixivAPI()
         self.authorize()
 
     def authorize(self):
-        self.username = self.shelf.get('pixivUsername')
-        self.password = self.shelf.get('pixivPassword')
+        self.username = self.dbDict.get('pixivUsername')
+        self.password = self.dbDict.get('pixivPassword')
         if self.username and self.password:
             self.api.login(self.username, self.password)
 
@@ -83,7 +81,7 @@ class Pixiv(object):
 
             if workDict['status'] == 'success':
                 identifier = str(imageDict.get('id'))
-                if identifier not in self.shelf['works']: # Skip images we've already loaded
+                if identifier not in self.dbDict['works']: # Skip images we've already loaded
                     user = imageDict.get('user') or {}
                     imageData['identifier']      = identifier
                     imageData['authorName']      = str(user.get('name'))
@@ -102,7 +100,7 @@ class Pixiv(object):
                     imageData['success']         = str(imageDict.get('status') == 'success')
                     imageData['error']           = str(imageDict.get('errors'))
 
-                    self.shelf['works'][identifier] = imageData
+                    self.dbDict['works'][identifier] = imageData
             else:
                 raise RuntimeError('Failed Pixiv API call: ' + workDict.get('errors'))
 
@@ -170,15 +168,8 @@ class Pixiv(object):
             return r.status_code + ' ' + url
 
 
-
 def main():
     pass
-    # os.makedirs(DOWNLOAD_DIRECTORY, exist_ok=True)
-    # _downloadImage('http://i1.pixiv.net/img-original/img/2015/11/04/23/41/16/53388104_p0.png')
-    # p = Pixiv()
-    # works = p.getWorks()
-    # print(json.dumps(works))
-
 
 
 if __name__ == '__main__':
