@@ -123,7 +123,7 @@ function calculateDimensions(baseImageWidth, baseImageHeight, name) {
 
     var scale = Math.min(
         (ww - ((vMin*artPadding/100.0 + vMin*artMargin/100.0 + artBorderWidth) * 2.0))/baseImageWidth,
-        (wh -  (vMin*artPadding/100.0 + vMin*artMargin/100.0 + artBorderWidth) * 2.0 - vMin*infoBarHeight/100.0)/baseImageHeight
+        (wh -  (vMin*artPadding/100.0 + vMin*artMargin/100.0 + artBorderWidth) * 2.0 - vMin*infoBarHeight/100.0 - 2.0*vMin*infoBarPadding/100.0)/baseImageHeight
     );
 
     return {
