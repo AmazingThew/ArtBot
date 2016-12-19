@@ -216,6 +216,61 @@ var Art = React.createClass( {
 //    }
 //});
 
+var downReleased = true;
+var upReleased   = true;
+
+document.onkeydown = function(e) {
+    var ww = window.innerWidth - scrollbarWidth*2;
+    var wh = window.innerHeight;
+    var vMin = (ww < wh) ? ww : wh;
+    var pad = vMin*artMargin/100.0;
+    var target;
+    var lastTarget;
+    //UP
+    if (e.keyCode == 38){
+        e.preventDefault();
+        if (upReleased) {
+            $(".art").each(function(i, element) {
+                target = $(element).offset().top - pad;
+                if (lastTarget + 10 < $(document).scrollTop() && target + 10 > $(document).scrollTop()) {
+                    target = lastTarget;
+                    return false; // break
+                }
+                lastTarget = target;
+            });
+            if (target < $(document).scrollTop()) {
+                $("html, body").animate({scrollTop: target}, 200);
+            }
+            upReleased = false;
+        }
+    }
+    //DOWN
+    if (e.keyCode == 40) {
+        e.preventDefault();
+        if (downReleased) {
+            $(".art").each(function(i, element) {
+                target = $(element).offset().top - pad;
+                if (target - 10 > $(document).scrollTop()) {
+                    return false; // break
+                }
+            });
+            $("html, body").animate({scrollTop: target}, 200);
+            downReleased = false;
+        }
+    }
+};
+
+document.onkeyup = function(e) {
+    var target;
+    //UP
+    if (e.keyCode == 38){
+        upReleased = true;
+    }
+    //DOWN
+    if (e.keyCode == 40) {
+        downReleased = true;
+    }
+};
 
 
 ReactDOM.render(

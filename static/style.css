@@ -21,6 +21,7 @@ body {
     display: inline-block;
     overflow: auto;
     text-align: center;
+    vertical-align: top;
 
     border-color: rgb(37, 45, 51) !important;
     background-color: rgb(28, 19, 30);
