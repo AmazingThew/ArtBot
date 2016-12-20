@@ -8,6 +8,7 @@ from flask import Flask, redirect, send_file, jsonify, request, render_template
 
 from loaders.deviantart import DeviantArt, DeviantArtApiError
 from loaders.pixiv import Pixiv
+from loaders.artstation import ArtStation
 
 
 DA_AUTH_REDIRECT = '/deviantartAuthorizationRedirect'
@@ -17,6 +18,7 @@ PIXIV_AVATAR_DIRECTORY   = 'static/avatars'
 
 USE_PIXIV      = True
 USE_DEVIANTART = True
+USE_ARTSTATION = False
 
 MAX_WORKS_ON_PAGE = 150
 
@@ -33,6 +35,7 @@ class ArtBot(object):
 
         if USE_PIXIV: self.pixiv = Pixiv(self.dbDict, PIXIV_DOWNLOAD_DIRECTORY, PIXIV_AVATAR_DIRECTORY)
         if USE_DEVIANTART: self.deviantart = DeviantArt(self.dbDict, 'http://localhost:58008'+DA_AUTH_REDIRECT)
+        if USE_ARTSTATION: self.artstation = ArtStation(self.dbDict, '')
 
         self.app.add_url_rule('/', 'index', self.index)
         self.app.add_url_rule('/getWorks', 'getWorks', self.getWorks)
@@ -82,6 +85,7 @@ class ArtBot(object):
     def getWorks(self):
         if USE_DEVIANTART: self.deviantart.loadWorks()
         if USE_PIXIV:      self.pixiv.loadWorks()
+        if USE_ARTSTATION: self.artstation.loadWorks()
 
         works = list(sorted(self.dbDict['works'].values(), key=lambda x: x['imageTimestamp'], reverse=True))[:MAX_WORKS_ON_PAGE]
 
@@ -145,4 +149,5 @@ def wipeWorks():
         pickle.dump(dbDict, dbFile)
 
 if __name__ == '__main__':
+    wipeWorks()
     ArtBot()

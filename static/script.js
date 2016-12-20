@@ -104,14 +104,16 @@ var ArtList = React.createClass( {
 });
 
 
-//Percentages of viewport width
+//Percentages of vmin
 var artPadding = 1;
 var artMargin = 1;
 var artBorderRadius = 1;
 var infoBarHeight = 5;
 var infoBarPadding = 1;
-//Pixels
-var artBorderWidth = 2;
+var artBorderWidth = 0.2;
+//Scale factor multiplied with vMin (just... don't even ask)
+//(the answer is "CSS is unfathomably trash")
+var interImagePadding = 0.004;
 
 function calculateDimensions(baseImageWidth, baseImageHeight, name) {
     var ww = window.innerWidth - scrollbarWidth*2;
@@ -122,13 +124,19 @@ function calculateDimensions(baseImageWidth, baseImageHeight, name) {
     baseImageHeight = parseInt(baseImageHeight, 10)
 
     var scale = Math.min(
-        (ww - ((vMin*artPadding/100.0 + vMin*artMargin/100.0 + artBorderWidth) * 2.0))/baseImageWidth,
-        (wh -  (vMin*artPadding/100.0 + vMin*artMargin/100.0 + artBorderWidth) * 2.0 - vMin*infoBarHeight/100.0 - 2.0*vMin*infoBarPadding/100.0)/baseImageHeight
+        (ww - ((vMin*artPadding/100.0 + vMin*artMargin/100.0 + vMin*artBorderWidth/100.0) * 2.0))/baseImageWidth,
+        (wh -  (vMin*artPadding/100.0 + vMin*artMargin/100.0 + vMin*artBorderWidth/100.0) * 2.0 - vMin*infoBarHeight/100.0 - 2.0*vMin*infoBarPadding/100.0)/baseImageHeight
     );
 
     return {
         targetWidth  : baseImageWidth*scale,
         targetHeight : baseImageHeight*scale,
+        maxW  : ww - (vMin * ((artPadding+artMargin+artBorderWidth)*2.0)/100.0),
+        maxH  : wh - (vMin * ((artPadding+artMargin+artBorderWidth+infoBarPadding+infoBarHeight)*2.0)/100.0),
+        tall : wh > ww,
+        ww : ww,
+        wh : wh,
+        vMin : vMin,
     };
 }
 
@@ -153,24 +161,30 @@ var Art = React.createClass( {
     },
 
     render: function() {
-        var targetWidth  = this.state.targetWidth;
-        var targetHeight = this.state.targetHeight;
-
+        var style;
+        if (this.props.artData.imageUrls.length > 1) {
+            var pad = this.state.vMin * interImagePadding;
+            var mw = this.state.maxW - this.state.vMin*interImagePadding*2.0;
+            var mh = this.state.maxH - this.state.vMin*interImagePadding*2.0;
+            style = {maxWidth: mw, maxHeight: mh, padding: pad};
+        } else {
+            style={height: this.state.targetHeight, width: this.state.targetWidth};
+        }
         var images = this.props.artData.imageUrls.map(function (url) {
             return (
-                <a href={url} key={url}><img src={url} alt={url} style={{height: targetHeight, width: targetWidth}} /></a>
+                <a href={url} key={url}><img src={url} alt={url} style={style} /></a>
             );
         });
 
         var artStyle = {
             margin: artMargin.toString()+'vmin',
+            border: artBorderWidth.toString()+'vmin solid',
             borderRadius: artBorderRadius.toString()+'vmin',
-            border: artBorderWidth.toString()+'px solid',
         };
 
         var artHolderStyle = {
             display: (this.state.hidden) ? 'none' : 'inline-block',
-            padding: artPadding.toString()+'vmin'
+            padding: artPadding.toString()+'vmin',
         };
 
         var infoBarStyle = {
