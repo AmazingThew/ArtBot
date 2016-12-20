@@ -1,6 +1,5 @@
 import datetime
 import os
-
 import pytz
 import requests
 from pixivpy3 import PixivAPI, PixivError
@@ -24,22 +23,19 @@ from pixivpy3 import PixivAPI, PixivError
 # Image type (Pixiv only; can be image, manga, or animation)
 
 class Pixiv(object):
-    def __init__(self, dbDict, downloadDirectory, avatarDirectory):
+    def __init__(self, dbDict, config):
         self.dbDict = dbDict
-        self.username = self.dbDict.get('pixivUsername')
-        self.password = self.dbDict.get('pixivPassword')
-        self.downloadDirectory = downloadDirectory
-        self.avatarDirectory = avatarDirectory
+        self.username = config['PIXIV_USERNAME']
+        self.password = config['PIXIV_PASSWORD']
+        self.downloadDirectory = config['PIXIV_DOWNLOAD_DIRECTORY']
+        self.avatarDirectory = config['PIXIV_AVATAR_DIRECTORY']
         os.makedirs(self.downloadDirectory, exist_ok=True)
         os.makedirs(self.avatarDirectory, exist_ok=True)
         self.api = PixivAPI()
         self.authorize()
 
     def authorize(self):
-        self.username = self.dbDict.get('pixivUsername')
-        self.password = self.dbDict.get('pixivPassword')
-        if self.username and self.password:
-            self.api.login(self.username, self.password)
+        self.api.login(self.username, self.password)
 
 
     def loadWorks(self):

@@ -1,0 +1,15 @@
+{
+	"PORT": 58008,
+	"PIXIV_DOWNLOAD_DIRECTORY": "static\/downloaded",
+	"PIXIV_AVATAR_DIRECTORY": "static\/avatars",
+	
+	"USE_DEVIANTART": true,
+	"USE_ARTSTATION": true,
+	"USE_PIXIV": true,
+	
+	"ARTSTATION_USERNAME": "",
+	"PIXIV_USERNAME": "",
+	"PIXIV_PASSWORD": "",
+	
+	"MAX_WORKS_ON_PAGE": 50
+}

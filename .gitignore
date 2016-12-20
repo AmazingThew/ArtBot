@@ -1,7 +1,7 @@
-/db.dat
-/db.dir
-/db.bak
+/db
+/config.json
 /static/downloaded
+/static/avatars
 # Windows image file caches
 Thumbs.db
 ehthumbs.db
