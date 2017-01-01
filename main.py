@@ -71,9 +71,10 @@ class ArtBot(object):
 
         works = list(sorted(self.dbDict['works'].values(), key=lambda x: x['imageTimestamp'], reverse=True))[:self.config['MAX_WORKS_ON_PAGE']]
 
-        self.cleanDb(works)
+        self.truncateDb()
         self.loadExtraWorkInfo()
         self.persistDb()
+        self.cleanDisk(works)
         return json.dumps(works)
 
 
@@ -82,10 +83,12 @@ class ArtBot(object):
         if self.config['USE_PIXIV']: self.pixiv.loadExtraWorkInfo()
 
 
-    def cleanDb(self, works):
+    def truncateDb(self):
         discard = list(sorted(self.dbDict['works'].items(), key=lambda x: x[1]['imageTimestamp'], reverse=True))[self.config['MAX_WORKS_ON_PAGE']:]
         [self.dbDict['works'].pop(key) for (key, val) in discard]
 
+
+    def cleanDisk(self, works):
         # Clean images
         keepImages = itertools.chain(*(work['imageUrls'] for work in works if work['imageUrls']))
         keepImages = set(os.path.split(url)[1] for url in keepImages if not url.startswith('http'))
