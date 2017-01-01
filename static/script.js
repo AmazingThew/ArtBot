@@ -57,9 +57,9 @@ var ArtColumn = React.createClass({
             cache: false,
             success: function(data) {
                 this.setState({
-                    artArray: data,
+                    artArray: data['art'],
                     progress: 0,
-                    intervalId: window.setInterval(this.updateProgress, 1200)
+                    intervalId: window.setInterval(this.updateProgress, data['pollingInterval'])
                 });
                 console.log('FINISHED LOAD')
             }.bind(this),

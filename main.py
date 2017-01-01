@@ -75,7 +75,12 @@ class ArtBot(object):
         self.loadExtraWorkInfo()
         self.persistDb()
         self.cleanDisk(works)
-        return json.dumps(works)
+
+        jason = {
+            'pollingInterval' : self.config['POLLING_INTERVAL'] * 600, # Minutes to microseconds
+            'art' : works,
+        }
+        return json.dumps(jason)
 
 
     def loadExtraWorkInfo(self):
