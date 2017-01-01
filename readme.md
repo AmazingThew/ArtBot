@@ -23,6 +23,7 @@ Works p well imo
 
 #HOW TO USE
 * Have Python 3.x
+* Have ffmpeg on your path (needed for Pixiv animations)
 * Use pip or your IDE or whatever to install all the modules you don't already have
 * Copy exampleConfig.json to a new file, name it config.json, add your login info to the appropriate fields and tweak obvious settings if desired
 * Yes it requires you to just dump your pixiv password into a plaintext config file leave me alone

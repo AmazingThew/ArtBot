@@ -1,7 +1,10 @@
 import datetime
 import os
+import itertools
 import pytz
 import requests
+import zipfile
+import subprocess
 from pixivpy3 import PixivAPI
 from pprint import pprint
 
@@ -25,12 +28,15 @@ from pprint import pprint
 
 class Pixiv(object):
     def __init__(self, dbDict, config):
+        self.config = config
         self.dbDict = dbDict
         self.username = config['PIXIV_USERNAME']
         self.password = config['PIXIV_PASSWORD']
-        self.downloadDirectory = config['PIXIV_DOWNLOAD_DIRECTORY']
-        self.avatarDirectory = config['PIXIV_AVATAR_DIRECTORY']
-        os.makedirs(self.downloadDirectory, exist_ok=True)
+        self.imageDirectory  = os.path.join(config['PIXIV_DOWNLOAD_DIRECTORY'], 'images')
+        self.ugoiraDirectory = os.path.join(config['PIXIV_DOWNLOAD_DIRECTORY'], 'ugoira')
+        self.avatarDirectory = os.path.join(config['PIXIV_DOWNLOAD_DIRECTORY'], 'avatars')
+        os.makedirs(self.imageDirectory, exist_ok=True)
+        os.makedirs(self.ugoiraDirectory, exist_ok=True)
         os.makedirs(self.avatarDirectory, exist_ok=True)
         self.api = PixivAPI()
         self.authorize()
@@ -42,7 +48,7 @@ class Pixiv(object):
     def loadWorks(self):
         print('Retrieving Pixiv works')
         self.authorize()
-        apiWorks = self.api.me_following_works()
+        apiWorks = self.api.me_following_works(1, self.config['MAX_WORKS_ON_PAGE'])
         workDicts = apiWorks['response']
         workDicts = [w for w in workDicts]
         [self._getImageData(workDict) for workDict in workDicts]
@@ -117,17 +123,17 @@ class Pixiv(object):
             urlDict = imageDict.get('image_urls') or {}
             urls = [self._generateImageUrl(urlDict.get('small') or urlDict.get('medium') or urlDict.get('large'))]
 
-        # Ugoira handling falls through to default for now
-        # elif workType == 'ugoira':
-        #     pass
+        elif workType == 'ugoira':
+            return self._constructUgoira(imageDict.get('id'))
 
         else:
             #Default case; all response types seem to have at least something in image_urls
             urlDict = imageDict.get('image_urls') or {}
             urls = [urlDict.get('small') or urlDict.get('medium') or urlDict.get('large')]
 
-        urls = [self._downloadImage(url, self.downloadDirectory) for url in urls]
+        urls = [self._downloadImage(url, self.imageDirectory) for url in urls]
         return urls
+
 
     def _generateImageUrl(self, url):
         # Construct the URL for the full-res image. Super brittle; entirely dependent on Pixiv never changing anything
@@ -137,6 +143,13 @@ class Pixiv(object):
 
 
     def _downloadImage(self, url, directory):
+        name = url[url.rfind('/') + 1:url.rfind('.')]
+        extant = {name.split('.')[0] : os.path.join(directory, name) for name in os.listdir(directory)}
+        if extant.get(name):
+            print('Already downloaded {}'.format(url))
+            return extant.get(name)
+
+
         print('Downloading ' + url)
         def attemptDownload(attemptUrl, suffix):
             attemptUrl = '.'.join((attemptUrl.rpartition('.')[0], suffix))
@@ -151,19 +164,68 @@ class Pixiv(object):
         if r.status_code == 200:
             filename = url.split('/')[-1]
             filepath = os.path.join(directory, filename)
-            if os.path.isfile(filepath):
-                print ('File already downloaded; skipping')
-            else:
-                with open(filepath, 'wb') as f:
-                    for chunk in r:
-                        f.write(chunk)
+            with open(filepath, 'wb') as f:
+                for chunk in r:
+                    f.write(chunk)
             return '/'.join((directory, filename))
         else:
             return r.status_code + ' ' + url
 
 
+    def _constructUgoira(self, identifier):
+        directory = os.path.join(self.ugoiraDirectory, str(identifier))
+        os.makedirs(directory, exist_ok=True)
+
+        response = self.api.works(identifier)
+        response = response.get('response')[0] or {}
+        metadata = response.get('metadata') or {}
+        frameTimes = ['duration {}'.format(delay['delay_msec']/1000) for delay in metadata.get('frames')]
+        zipUrl = sorted(metadata['zip_urls'].items())[-1][1]  # I don't think zip_urls will ever be longer than 1 but ??
+
+        zipPath = self._downloadUgoiraZip(zipUrl, directory)
+        with zipfile.ZipFile(zipPath, 'r') as zap:
+            zap.extractall(directory)
+
+        imagePaths = ["file '{}'".format(fileName) for fileName in os.listdir(directory) if not fileName.endswith('.zip')]
+        frameData = '\n'.join(itertools.chain(*zip(imagePaths, frameTimes)))
+
+        concatFile = os.path.join(directory, 'concat.txt')
+        print('Writing frame data to: {}'.format(concatFile))
+        with open(concatFile, 'w') as f:
+            f.write(frameData)
+
+        concatFile = os.path.abspath(os.path.join(os.getcwd(), concatFile))
+        workingDirectory = os.path.abspath(os.path.join(os.getcwd(), directory))
+        outFile = os.path.join(directory, '{}.webm'.format(identifier))
+        ffmpeg = 'ffmpeg -n -f concat -i {} -c:v libvpx -crf 10 -b:v 2M {}.webm'.format(concatFile, identifier)
+        print('Rendering video to {}'.format(outFile))
+        subprocess.run(ffmpeg, shell=True, cwd=workingDirectory)
+        print('Finished rendering')
+
+        return [outFile]
+
+
+    def _downloadUgoiraZip(self, url, directory):
+        print('Downloading ugoira zip: {}'.format(url))
+        path = os.path.join(directory, url.split('/')[-1])
+        if os.path.exists(path):
+            print('Zip already downloaded; skipping')
+        else:
+            r = requests.get(url, headers={'referer': url[:url.find('/img')]}, stream=True)
+            with open(path, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=1024):
+                    if chunk:  # filter out keep-alive new chunks
+                        f.write(chunk)
+
+        return path
+
+
 def main():
-    pass
+    import json
+    with open('config.json', 'r') as configFile:
+        config = json.load(configFile)
+    pixiv = Pixiv({}, config)
+    pixiv._constructUgoira(54479669)
 
 
 if __name__ == '__main__':

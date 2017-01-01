@@ -162,7 +162,8 @@ var Art = React.createClass( {
 
     render: function() {
         var style;
-        if (this.props.artData.imageUrls.length > 1) {
+        var artData = this.props.artData;
+        if (artData.imageUrls.length > 1) {
             var pad = this.state.vMin * interImagePadding;
             var mw = this.state.maxW - this.state.vMin*interImagePadding*2.0;
             var mh = this.state.maxH - this.state.vMin*interImagePadding*2.0;
@@ -170,10 +171,16 @@ var Art = React.createClass( {
         } else {
             style={height: this.state.targetHeight, width: this.state.targetWidth};
         }
-        var images = this.props.artData.imageUrls.map(function (url) {
-            return (
-                <a href={url} key={url}><img src={url} alt={url} style={style} /></a>
-            );
+        var images = artData.imageUrls.map(function (url) {
+            if (artData.imageType == 'ugoira') {
+                return (
+                    <video src={url} alt={url} style={style} controls autoPlay loop muted />
+                );
+            } else {
+                return (
+                    <a href={url} key={url}><img src={url} alt={url} style={style} /></a>
+                );
+            }
         });
 
         var artStyle = {
@@ -199,16 +206,16 @@ var Art = React.createClass( {
                     {images}
                 </div>
                 <div className="infoBar" style={infoBarStyle}>
-                    <a href={this.props.artData.profileUrl}><img src={this.props.artData.authorAvatarUrl} /></a>
+                    <a href={artData.profileUrl}><img src={artData.authorAvatarUrl} /></a>
                     <div className="nameHolder" style={{marginLeft: infoBarPadding.toString()+'vmin'}}>
                         <p>
-                            <a href={this.props.artData.profileUrl}>{this.props.artData.authorName}</a>
+                            <a href={artData.profileUrl}>{artData.authorName}</a>
                             <br/>
-                            {this.props.artData.website}
+                            {artData.website}
                         </p>
                     </div>
                     <div className="titleHolder">
-                        <h1><a href={this.props.artData.imagePageUrl}>{this.props.artData.imageTitle}</a></h1>
+                        <h1><a href={artData.imagePageUrl}>{artData.imageTitle}</a></h1>
                     </div>
                     <div className="buttonHolder">
                         <a href="#" className="butt" onClick={this.handleClick}>=</a>

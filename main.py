@@ -2,9 +2,9 @@ import json
 import os
 import pickle
 from pprint import pprint
-
 import itertools
 import sys
+import shutil
 from flask import Flask, redirect, send_file, jsonify, request, render_template
 from loaders.deviantart import DeviantArt, DeviantArtApiError
 from loaders.pixiv import Pixiv
@@ -88,18 +88,25 @@ class ArtBot(object):
         # Clean images
         keepImages = itertools.chain(*(work['imageUrls'] for work in works))
         keepImages = set(os.path.split(url)[1] for url in keepImages if not url.startswith('http'))
-        existingImages = set(os.path.split(url)[1] for url in os.listdir(self.config['PIXIV_DOWNLOAD_DIRECTORY']))
+        existingImages = set(os.path.split(url)[1] for url in os.listdir(self.pixiv.imageDirectory))
         imagesToRemove = existingImages - keepImages
 
-        [os.remove(os.path.join(self.config['PIXIV_DOWNLOAD_DIRECTORY'], name)) for name in imagesToRemove]
+        [os.remove(os.path.join(self.pixiv.imageDirectory, name)) for name in imagesToRemove]
 
         # Clean avatars
         keepAvatars = (work['authorAvatarUrl'] for work in works)
         keepAvatars = set(os.path.split(url)[1] for url in keepAvatars if not url.startswith('http'))
-        existingAvatars = set(os.path.split(url)[1] for url in os.listdir(self.config['PIXIV_AVATAR_DIRECTORY']))
+        existingAvatars = set(os.path.split(url)[1] for url in os.listdir(self.pixiv.avatarDirectory))
         avatarsToRemove = existingAvatars - keepAvatars
 
-        [os.remove(os.path.join(self.config['PIXIV_AVATAR_DIRECTORY'], name)) for name in avatarsToRemove]
+        [os.remove(os.path.join(self.pixiv.avatarDirectory, name)) for name in avatarsToRemove]
+
+        # Clean videos
+        allIds = (work['identifier'] for work in works)
+        videoIds = next(os.walk(self.pixiv.ugoiraDirectory))[1]
+        videoDirsToRemove = set(videoIds) - set(allIds)
+
+        [shutil.rmtree(os.path.join(self.pixiv.ugoiraDirectory, directory)) for directory in videoDirsToRemove]
 
 
     def persistDb(self):
