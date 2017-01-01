@@ -79,6 +79,7 @@ class ArtBot(object):
 
     def loadExtraWorkInfo(self):
         if self.config['USE_ARTSTATION']: self.artstation.loadExtraWorkInfo()
+        if self.config['USE_PIXIV']: self.pixiv.loadExtraWorkInfo()
 
 
     def cleanDb(self, works):
@@ -86,7 +87,7 @@ class ArtBot(object):
         [self.dbDict['works'].pop(key) for (key, val) in discard]
 
         # Clean images
-        keepImages = itertools.chain(*(work['imageUrls'] for work in works))
+        keepImages = itertools.chain(*(work['imageUrls'] for work in works if work['imageUrls']))
         keepImages = set(os.path.split(url)[1] for url in keepImages if not url.startswith('http'))
         existingImages = set(os.path.split(url)[1] for url in os.listdir(self.pixiv.imageDirectory))
         imagesToRemove = existingImages - keepImages
@@ -94,7 +95,7 @@ class ArtBot(object):
         [os.remove(os.path.join(self.pixiv.imageDirectory, name)) for name in imagesToRemove]
 
         # Clean avatars
-        keepAvatars = (work['authorAvatarUrl'] for work in works)
+        keepAvatars = (work['authorAvatarUrl'] for work in works if work['authorAvatarUrl'])
         keepAvatars = set(os.path.split(url)[1] for url in keepAvatars if not url.startswith('http'))
         existingAvatars = set(os.path.split(url)[1] for url in os.listdir(self.pixiv.avatarDirectory))
         avatarsToRemove = existingAvatars - keepAvatars

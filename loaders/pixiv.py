@@ -54,6 +54,21 @@ class Pixiv(object):
         [self._getImageData(workDict) for workDict in workDicts]
 
 
+    def loadExtraWorkInfo(self):
+        updates = []
+        worksToUpdate = [work for work in self.dbDict['works'].values() if work['website'] == 'Pixiv' and not work.get('imageUrls')]
+        for work in worksToUpdate:
+            imageDict = work['pixivMeta']
+            extraInfo = {
+                'authorAvatarUrl' : self._getAvatarUrl(str(imageDict.get('user').get('profile_image_urls').get('px_50x50'))),
+                'imageUrls' : self._getImageUrls(imageDict),
+                'pixivMeta' : '',
+            }
+            updates.append((work['identifier'], extraInfo))
+
+        [self.dbDict['works'][identifier].update(extraInfo) for (identifier, extraInfo) in updates]
+
+
     def _getImageData(self, imageDict):
         imageData = {
             'identifier'      : '',
@@ -72,6 +87,7 @@ class Pixiv(object):
             'height'          : '500',
             'success'         : False,
             'error'           : 'Unknown error',
+            'pixivMeta'       : '',
         }
 
         identifier = str(imageDict.get('id'))
@@ -80,11 +96,11 @@ class Pixiv(object):
             imageData['identifier']      = identifier
             imageData['authorName']      = str(user.get('name'))
             imageData['authorHandle']    = str(user.get('account'))
-            imageData['authorAvatarUrl'] = self._getAvatarUrl(str((user.get('profile_image_urls') or {}).get('px_50x50')))
+            imageData['authorAvatarUrl'] = None
             imageData['profileUrl']      = 'http://www.pixiv.net/member.php?id=' + str(user.get('id'))
             imageData['website']         = 'Pixiv'
             imageData['imageTitle']      = str(imageDict.get('title'))
-            imageData['imageUrls']       = self._getImageUrls(imageDict)
+            imageData['imageUrls']       = None
             imageData['imagePageUrl']    = 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=' + str(imageDict.get('id'))
             imageData['imageTimestamp']  = str(max(imageDict.get('created_time'), imageDict.get('reupoloaded_time', '')))
             imageData['imageType']       = str(imageDict.get('type'))
@@ -93,6 +109,7 @@ class Pixiv(object):
             imageData['height']          = str(imageDict.get('height')) or '500'
             imageData['success']         = str(imageDict.get('status') == 'success')
             imageData['error']           = str(imageDict.get('errors'))
+            imageData['pixivMeta']       = imageDict #stores the pixiv API info to facilitate late download of images
 
             self.dbDict['works'][identifier] = imageData
 
@@ -221,11 +238,7 @@ class Pixiv(object):
 
 
 def main():
-    import json
-    with open('config.json', 'r') as configFile:
-        config = json.load(configFile)
-    pixiv = Pixiv({}, config)
-    pixiv._constructUgoira(54479669)
+    pass
 
 
 if __name__ == '__main__':
