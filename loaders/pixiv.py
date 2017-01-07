@@ -102,7 +102,7 @@ class Pixiv(object):
             imageData['imageTitle']      = str(imageDict.get('title'))
             imageData['imageUrls']       = None
             imageData['imagePageUrl']    = 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=' + str(imageDict.get('id'))
-            imageData['imageTimestamp']  = str(max(imageDict.get('created_time'), imageDict.get('reupoloaded_time', '')))
+            imageData['imageTimestamp']  = self._parseTime(imageDict)
             imageData['imageType']       = str(imageDict.get('type'))
             imageData['nsfw']            = str(imageDict.get('age_limit') != 'all-age')
             imageData['width']           = str(imageDict.get('width')) or '500'
@@ -116,7 +116,7 @@ class Pixiv(object):
 
     def _parseTime(self, imageDict):
         s = max(imageDict.get('created_time', ''), imageDict.get('reupoloaded_time', ''))
-        return datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.UTC).isoformat()
+        return datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.timezone("Asia/Tokyo")).isoformat()
 
     def _getAvatarUrl(self, remoteUrl):
         return self._downloadImage(remoteUrl, self.avatarDirectory)
