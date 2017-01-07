@@ -27,6 +27,8 @@ function getScrollbarWidth() { //BURN WEB STANDARDS TO THE GROUND
     return (w1 - w2);
 }
 
+var unviewedCount = 0;
+var focused = false;
 var scrollbarWidth = getScrollbarWidth();
 
 
@@ -56,6 +58,10 @@ var ArtColumn = React.createClass({
             dataType: 'json',
             cache: false,
             success: function(data) {
+                if (!focused) {
+                    unviewedCount += data['newCount'];
+                    document.title = unviewedCount + " new - ArtBot";
+                }
                 this.setState({
                     artArray: data['art'],
                     progress: 0,
@@ -292,6 +298,16 @@ document.onkeyup = function(e) {
         downReleased = true;
     }
 };
+
+window.onfocus = function() {
+    focused = true;
+    unviewedCount = 0;
+    document.title = "ArtBot";
+}
+
+window.onblur = function() {
+    focused = false;
+}
 
 
 ReactDOM.render(

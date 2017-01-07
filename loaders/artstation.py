@@ -61,7 +61,6 @@ class ArtStation(object):
 
 
     def _getArtistWorks(self, username, fullName, avatarUrl):
-        print('Getting works for artist: ' + username)
         profileUrl = 'https://www.artstation.com/artist/'+username
         feed = feedparser.parse(profileUrl+'.rss')
         if feed['bozo'] != 0:

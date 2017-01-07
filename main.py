@@ -65,11 +65,17 @@ class ArtBot(object):
 
 
     def getWorks(self):
+        existingWorks = list(sorted(self.dbDict['works'].values(), key=lambda x: x['imageTimestamp'], reverse=True))[:self.config['MAX_WORKS_ON_PAGE']]
+        existingIds = set(w['identifier'] for w in existingWorks)
+
         if self.config['USE_DEVIANTART']: self.deviantart.loadWorks()
         if self.config['USE_PIXIV']:      self.pixiv.loadWorks()
         if self.config['USE_ARTSTATION']: self.artstation.loadWorks()
 
         works = list(sorted(self.dbDict['works'].values(), key=lambda x: x['imageTimestamp'], reverse=True))[:self.config['MAX_WORKS_ON_PAGE']]
+        currentIds = set(w['identifier'] for w in works)
+
+        newCount = len(currentIds - existingIds)
 
         self.truncateDb()
         self.loadExtraWorkInfo()
@@ -78,7 +84,8 @@ class ArtBot(object):
 
         jason = {
             'pollingInterval' : self.config['POLLING_INTERVAL'] * 600, # Minutes to microseconds
-            'art' : works,
+            'newCount'        : newCount,
+            'art'             : works,
         }
         return json.dumps(jason)
 
