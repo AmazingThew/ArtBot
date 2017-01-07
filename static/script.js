@@ -60,7 +60,9 @@ var ArtColumn = React.createClass({
             success: function(data) {
                 if (!focused) {
                     unviewedCount += data['newCount'];
-                    document.title = unviewedCount + " new - ArtBot";
+                    if (unviewedCount > 0) {
+                        document.title = unviewedCount + " new - ArtBot";
+                    }
                 }
                 this.setState({
                     artArray: data['art'],
