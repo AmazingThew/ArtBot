@@ -116,7 +116,7 @@ class Pixiv(object):
 
     def _parseTime(self, imageDict):
         s = max(imageDict.get('created_time', ''), imageDict.get('reupoloaded_time', ''))
-        return datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.timezone("Asia/Tokyo")).isoformat()
+        return datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.timezone("Asia/Tokyo")).astimezone(pytz.utc).isoformat()
 
     def _getAvatarUrl(self, remoteUrl):
         return self._downloadImage(remoteUrl, self.avatarDirectory)

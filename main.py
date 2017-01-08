@@ -161,7 +161,7 @@ def wipeWorks():
 def viewDb():
     with open(DB_FILENAME, 'rb') as dbFile:
         dbDict = pickle.load(dbFile)
-        pprint(dbDict)
+        pprint([(v['website'], v['imageTimestamp']) for v in dbDict['works'].values()])
 
 if __name__ == '__main__':
     # wipeWorks()
