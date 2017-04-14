@@ -154,7 +154,7 @@ class Pixiv(object):
 
     def _generateImageUrl(self, url):
         # Construct the URL for the full-res image. Super brittle; entirely dependent on Pixiv never changing anything
-        leftSide  = url[:url.find('pixiv.net')+10]
+        leftSide  = url[:url[8:].find('/')+9] #Split on first slash after https://
         rightSide = url[url.find('/img/'):].replace('_master1200', '')
         return leftSide + 'img-original' + rightSide
 
