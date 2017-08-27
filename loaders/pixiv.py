@@ -71,46 +71,28 @@ class Pixiv(object):
 
 
     def _getImageData(self, imageDict):
-        imageData = {
-            'identifier'      : '',
-            'authorName'      : '',
-            'authorHandle'    : '',
-            'authorAvatarUrl' : '',
-            'profileUrl'      : '',
-            'website'         : '',
-            'imageTitle'      : '',
-            'imageUrls'       : [],
-            'imagePageUrl'    : '',
-            'imageTimestamp'  : '',
-            'imageType'       : '',
-            'nsfw'            : False,
-            'width'           : '500',
-            'height'          : '500',
-            'success'         : False,
-            'error'           : 'Unknown error',
-            'pixivMeta'       : '',
-        }
-
         identifier = str(imageDict.get('id'))
         if identifier not in self.dbDict['works']: # Skip images we've already loaded
             user = imageDict.get('user') or {}
-            imageData['identifier']      = identifier
-            imageData['authorName']      = str(user.get('name'))
-            imageData['authorHandle']    = str(user.get('account'))
-            imageData['authorAvatarUrl'] = None
-            imageData['profileUrl']      = 'http://www.pixiv.net/member.php?id=' + str(user.get('id'))
-            imageData['website']         = 'Pixiv'
-            imageData['imageTitle']      = str(imageDict.get('title'))
-            imageData['imageUrls']       = None
-            imageData['imagePageUrl']    = 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=' + str(imageDict.get('id'))
-            imageData['imageTimestamp']  = self._parseTime(imageDict)
-            imageData['imageType']       = str(imageDict.get('type'))
-            imageData['nsfw']            = str(imageDict.get('age_limit') != 'all-age')
-            imageData['width']           = str(imageDict.get('width')) or '500'
-            imageData['height']          = str(imageDict.get('height')) or '500'
-            imageData['success']         = str(imageDict.get('status') == 'success')
-            imageData['error']           = str(imageDict.get('errors'))
-            imageData['pixivMeta']       = imageDict #stores the pixiv API info to facilitate late download of images
+            imageData = {
+                'identifier'      : identifier,
+                'authorName'      : str(user.get('name')),
+                'authorHandle'    : str(user.get('account')),
+                'authorAvatarUrl' : None,
+                'profileUrl'      : 'http://www.pixiv.net/member.php?id=' + str(user.get('id')),
+                'website'         : 'Pixiv',
+                'imageTitle'      : str(imageDict.get('title')),
+                'imageUrls'       : None,
+                'imagePageUrl'    : 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=' + str(imageDict.get('id')),
+                'imageTimestamp'  : self._parseTime(imageDict),
+                'imageType'       : str(imageDict.get('type')),
+                'nsfw'            : str(imageDict.get('age_limit') != 'all-age'),
+                'width'           : str(imageDict.get('width')) or '500',
+                'height'          : str(imageDict.get('height')) or '500',
+                'success'         : str(imageDict.get('status') == 'success'),
+                'error'           : str(imageDict.get('errors')),
+                'pixivMeta'       : imageDict, #stores the pixiv API info to facilitate late download of images
+            }
 
             self.dbDict['works'][identifier] = imageData
 
@@ -125,7 +107,7 @@ class Pixiv(object):
     def _getImageUrls(self, imageDict):
         workType = imageDict.get('type')
 
-        if imageDict.get('is_manga') == True or workType == 'manga':
+        if imageDict.get('is_manga'):
             response = self.api.works(imageDict['id'])
             response = response.get('response')[0] or {}
             metadata = response.get('metadata') or {}
@@ -137,7 +119,9 @@ class Pixiv(object):
 
             urls = [getMangaUrl(item) for item in pages]
 
-        elif workType == 'illustration':
+        # Weird special case: "type" field in Pixiv JSON can be "manga" while "is_manga" is False
+        # In this case there is only a single image URL and the JSON is formatted like an illustration
+        elif workType == 'illustration' or (workType == 'manga' and not imageDict.get('is_manga')):
             urlDict = imageDict.get('image_urls') or {}
             urls = [self._generateImageUrl(urlDict.get('small') or urlDict.get('medium') or urlDict.get('large'))]
 
