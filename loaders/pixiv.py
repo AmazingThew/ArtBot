@@ -57,6 +57,7 @@ class Pixiv(object):
     def loadExtraWorkInfo(self):
         updates = []
         worksToUpdate = [work for work in self.dbDict['works'].values() if work['website'] == 'Pixiv' and not work.get('imageUrls')]
+        if worksToUpdate: print("Found {} new Pixiv works".format(len(worksToUpdate)))
         for work in worksToUpdate:
             imageDict = work['pixivMeta']
             extraInfo = {

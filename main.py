@@ -32,7 +32,7 @@ class ArtBot(object):
 
         if self.config['USE_PIXIV']: self.pixiv = Pixiv(self.dbDict, self.config)
         if self.config['USE_DEVIANTART']: self.deviantart = DeviantArt(self.dbDict, 'http://localhost:{}{}'.format(self.config['PORT'], DA_AUTH_REDIRECT))
-        if self.config['USE_ARTSTATION']: self.artstation = ArtStation(self.dbDict, self.config['ARTSTATION_USERNAME'])
+        if self.config['USE_ARTSTATION']: self.artstation = ArtStation(self.dbDict, self.config)
 
         self.app.add_url_rule('/', 'index', self.index)
         self.app.add_url_rule('/getWorks', 'getWorks', self.getWorks)
@@ -101,28 +101,29 @@ class ArtBot(object):
 
 
     def cleanDisk(self, works):
-        # Clean images
-        keepImages = itertools.chain(*(work['imageUrls'] for work in works if work['imageUrls']))
-        keepImages = set(os.path.split(url)[1] for url in keepImages if not url.startswith('http'))
-        existingImages = set(os.path.split(url)[1] for url in os.listdir(self.pixiv.imageDirectory))
-        imagesToRemove = existingImages - keepImages
+        if self.config['USE_PIXIV']:
+            # Clean images
+            keepImages = itertools.chain(*(work['imageUrls'] for work in works if work['imageUrls']))
+            keepImages = set(os.path.split(url)[1] for url in keepImages if not url.startswith('http'))
+            existingImages = set(os.path.split(url)[1] for url in os.listdir(self.pixiv.imageDirectory))
+            imagesToRemove = existingImages - keepImages
 
-        [os.remove(os.path.join(self.pixiv.imageDirectory, name)) for name in imagesToRemove]
+            [os.remove(os.path.join(self.pixiv.imageDirectory, name)) for name in imagesToRemove]
 
-        # Clean avatars
-        keepAvatars = (work['authorAvatarUrl'] for work in works if work['authorAvatarUrl'])
-        keepAvatars = set(os.path.split(url)[1] for url in keepAvatars if not url.startswith('http'))
-        existingAvatars = set(os.path.split(url)[1] for url in os.listdir(self.pixiv.avatarDirectory))
-        avatarsToRemove = existingAvatars - keepAvatars
+            # Clean avatars
+            keepAvatars = (work['authorAvatarUrl'] for work in works if work['authorAvatarUrl'])
+            keepAvatars = set(os.path.split(url)[1] for url in keepAvatars if not url.startswith('http'))
+            existingAvatars = set(os.path.split(url)[1] for url in os.listdir(self.pixiv.avatarDirectory))
+            avatarsToRemove = existingAvatars - keepAvatars
 
-        [os.remove(os.path.join(self.pixiv.avatarDirectory, name)) for name in avatarsToRemove]
+            [os.remove(os.path.join(self.pixiv.avatarDirectory, name)) for name in avatarsToRemove]
 
-        # Clean videos
-        allIds = (work['identifier'] for work in works)
-        videoIds = next(os.walk(self.pixiv.ugoiraDirectory))[1]
-        videoDirsToRemove = set(videoIds) - set(allIds)
+            # Clean videos
+            allIds = (work['identifier'] for work in works)
+            videoIds = next(os.walk(self.pixiv.ugoiraDirectory))[1]
+            videoDirsToRemove = set(videoIds) - set(allIds)
 
-        [shutil.rmtree(os.path.join(self.pixiv.ugoiraDirectory, directory)) for directory in videoDirsToRemove]
+            [shutil.rmtree(os.path.join(self.pixiv.ugoiraDirectory, directory)) for directory in videoDirsToRemove]
 
 
     def persistDb(self):
